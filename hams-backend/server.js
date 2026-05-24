@@ -7,9 +7,9 @@ const cors = require('cors');
 
 
 // Import Modularized Routes
-const authRoutes = require('./routes/authRoutes');
-const productRoutes = require('./routes/productRoutes');
-const salesRoutes = require('./routes/salesRoutes');
+const authRoutes = require('./Routes/authRoutes');
+const productRoutes = require('./Routes/productRoutes');
+const salesRoutes = require('./Routes/salesRoutes');
 
 const app = express();
 
