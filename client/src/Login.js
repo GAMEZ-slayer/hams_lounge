@@ -21,7 +21,7 @@ const Login = ({ onLogin }) => {
     };
 
     try {
-      const response = await axios.post('https://hams-lounge-4.onrender.com', loginPayload);
+      const response = await axios.post('REACT_APP_API_URL', loginPayload);
 
       if (response.data?.token) {
         localStorage.setItem('token', response.data.token);
