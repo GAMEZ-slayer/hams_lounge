@@ -21,7 +21,7 @@ const Login = ({ onLogin }) => {
     };
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', loginPayload);
+      const response = await axios.post('https://hams-lounge-4.onrender.com', loginPayload);
 
       if (response.data?.token) {
         localStorage.setItem('token', response.data.token);
