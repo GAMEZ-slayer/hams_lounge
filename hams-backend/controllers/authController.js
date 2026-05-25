@@ -2,71 +2,69 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sequelize } = require('../config/db');
 
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
+
 exports.login = async (req, res) => {
   try {
     const { username, password, pin, role } = req.body;
-    console.log("📥 Incoming Unified Login Attempt:", { username, password, pin, role });
 
-    // === HARDCODED EMERGENCY BYPASS ===
-    if ((username === 'admin' || role === 'admin') && (password === '123456' || password === 'admin')) {
-      console.log("🔑 Master Admin Bypass Triggered!");
-      const token = jwt.sign({ id: 1, role: 'admin' }, 'HAMS_SECRET_KEY_2026', { expiresIn: '12h' });
-      return res.json({ token, role: 'admin', username: 'admin' });
+    if (!username || (!password && !pin)) {
+      return res.status(400).json({ message: 'Username and password/pin are required.' });
     }
-
-    const submittedPin = String(pin || password || '');
-    if (role === 'staff' || username === 'staff' || submittedPin === '2026') {
-      if (submittedPin === '2026' || submittedPin === '1234') {
-        console.log("📱 Master Staff Bypass Triggered!");
-        const token = jwt.sign({ id: 2, role: 'staff' }, 'HAMS_SECRET_KEY_2026', { expiresIn: '12h' });
-        return res.json({ token, role: 'staff', username: 'staff' });
-      }
-    }
-    // ===================================
 
     const [userRows] = await sequelize.query(
-      "SELECT * FROM Users WHERE username = ? OR email = ? LIMIT 1", 
-      { replacements: [username || '', username || ''] }
+      'SELECT * FROM Users WHERE username = ? LIMIT 1',
+      { replacements: [username] }
     );
 
-    if (!userRows || userRows.length === 0) {
-      return res.status(401).json({ message: 'User profile registry not found.' });
+    // DEBUG — remove after confirming login works
+    console.log('🔍 DB lookup for:', username, '| Found:', userRows.length, 'user(s)');
+    if (userRows[0]) {
+      console.log('👤 User:', userRows[0].username, '| Role:', userRows[0].role, '| Pass preview:', userRows[0].password?.substring(0, 10));
     }
 
-    const databaseUser = userRows[0];
+    if (!userRows || userRows.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials.' });
+    }
 
-    if (role && databaseUser.role !== role) {
-      return res.status(403).json({ 
-        message: `Access Denied: This account is not registered as an ${role.toUpperCase()}.` 
+    const user = userRows[0];
+
+    if (role && user.role !== role) {
+      return res.status(403).json({
+        message: `Access Denied: This account is not registered as ${role.toUpperCase()}.`
       });
     }
 
-    const authenticationPayload = databaseUser.role === 'staff' ? submittedPin : password;
-    let isMatch = false;
-    try {
-      isMatch = await bcrypt.compare(authenticationPayload, databaseUser.password);
-    } catch (e) {
-      isMatch = false;
+    const submittedCredential = user.role === 'staff'
+      ? String(pin || password || '')
+      : String(password || '');
+
+    if (!submittedCredential) {
+      return res.status(400).json({ message: 'Credential (password or PIN) is required.' });
     }
 
-    if (!isMatch && databaseUser.password === authenticationPayload) {
-      isMatch = true; 
-    }
+    const isMatch = await bcrypt.compare(submittedCredential, user.password);
 
     if (!isMatch) {
-      return res.status(401).json({ message: `Invalid credentials for ${databaseUser.role || 'user'}.` });
+      return res.status(401).json({ message: 'Invalid credentials.' });
     }
-    
+
+    if (!JWT_SECRET) {
+      console.error('JWT_SECRET is not set in environment variables.');
+      return res.status(500).json({ message: 'Server configuration error.' });
+    }
+
     const token = jwt.sign(
-      { id: databaseUser.id, role: databaseUser.role }, 
-      'HAMS_SECRET_KEY_2026', 
-      { expiresIn: '12h' }
+      { id: user.id, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
-    return res.json({ token, role: databaseUser.role, username: databaseUser.username });
+    return res.json({ token, role: user.role, username: user.username });
 
   } catch (err) {
-    console.error("🔥 Login Route Exception Error:", err);
-    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+    console.error('Login error:', err);
+    return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
