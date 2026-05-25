@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://hams-lounge-3.onrender.com', // Points to your unified backend
+  baseURL: 'https://hams-lounge-4.onrender.com', // Points to your unified backend
 });
 
 // Automatically attaches your secure token to every request header
