@@ -21,7 +21,7 @@ const Login = ({ onLogin }) => {
     };
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', loginPayload);
+      const response = await axios.post('REACT_APP_API_URL', loginPayload);
 
       if (response.data?.token) {
         localStorage.setItem('token', response.data.token);
