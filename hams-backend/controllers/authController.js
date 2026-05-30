@@ -1,4 +1,3 @@
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sequelize } = require('../config/db');
 
@@ -7,10 +6,10 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
 
 exports.login = async (req, res) => {
   try {
-    const { username, password, pin, role } = req.body;
+    const { username, role } = req.body;
 
-    if (!username || (!password && !pin)) {
-      return res.status(400).json({ message: 'Username and password/pin are required.' });
+    if (!username) {
+      return res.status(400).json({ message: 'Username is required.' });
     }
 
     const [userRows] = await sequelize.query(
@@ -18,36 +17,17 @@ exports.login = async (req, res) => {
       { replacements: [username] }
     );
 
-    // DEBUG — remove after confirming login works
-    console.log('🔍 DB lookup for:', username, '| Found:', userRows.length, 'user(s)');
-    if (userRows[0]) {
-      console.log('👤 User:', userRows[0].username, '| Role:', userRows[0].role, '| Pass preview:', userRows[0].password?.substring(0, 10));
-    }
-
     if (!userRows || userRows.length === 0) {
-      return res.status(401).json({ message: 'Invalid credentials.' });
+      return res.status(401).json({ message: 'User not found.' });
     }
 
     const user = userRows[0];
 
+    // Still enforce role match — admin can't login as staff and vice versa
     if (role && user.role !== role) {
       return res.status(403).json({
         message: `Access Denied: This account is not registered as ${role.toUpperCase()}.`
       });
-    }
-
-    const submittedCredential = user.role === 'staff'
-      ? String(pin || password || '')
-      : String(password || '');
-
-    if (!submittedCredential) {
-      return res.status(400).json({ message: 'Credential (password or PIN) is required.' });
-    }
-
-    const isMatch = await bcrypt.compare(submittedCredential, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
     if (!JWT_SECRET) {

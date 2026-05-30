@@ -4,7 +4,6 @@ import axios from 'axios';
 const Login = ({ onLogin }) => {
   const [role, setRole] = useState('staff');
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -15,13 +14,11 @@ const Login = ({ onLogin }) => {
 
     const loginPayload = {
       role,
-      username,                              // Always use what the user typed
-      password: role === 'admin' ? password : undefined,
-      pin:      role === 'staff' ? password : undefined,
+      username,
     };
 
     try {
-      const response = await axios.post('REACT_APP_API_URL', loginPayload);
+      const response = await axios.post('http://localhost:5000/api/auth/login', loginPayload);
 
       if (response.data?.token) {
         localStorage.setItem('token', response.data.token);
@@ -33,7 +30,7 @@ const Login = ({ onLogin }) => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Authentication failed. Please check your credentials.');
+      setError(err.response?.data?.message || 'Authentication failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -42,7 +39,6 @@ const Login = ({ onLogin }) => {
   const handleTabChange = (selectedRole) => {
     setRole(selectedRole);
     setUsername('');
-    setPassword('');
     setError('');
   };
 
@@ -71,15 +67,12 @@ const Login = ({ onLogin }) => {
         <h2 style={styles.title}>
           {role === 'admin' ? 'Administrative Portal' : 'Hams Lounge Staff'}
         </h2>
-        <p style={styles.subtitle}>
-          {role === 'admin' ? 'Enter your admin credentials' : 'Enter your username and PIN'}
-        </p>
+        <p style={styles.subtitle}>Enter your username to continue</p>
 
         {error && <div style={styles.errorBanner}>❌ {error}</div>}
 
         <form onSubmit={handleSubmit}>
 
-          {/* Username — shown for both roles now */}
           <div style={styles.inputGroup}>
             <label style={styles.label}>
               {role === 'staff' ? 'Staff Username' : 'Admin Username'}
@@ -90,20 +83,6 @@ const Login = ({ onLogin }) => {
               placeholder={role === 'staff' ? 'Your username' : 'e.g., admin'}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              style={styles.input}
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>
-              {role === 'staff' ? 'Access PIN' : 'Password'}
-            </label>
-            <input
-              type="password"
-              required
-              placeholder={role === 'staff' ? '••••' : '••••••••'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               style={styles.input}
             />
           </div>
