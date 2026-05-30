@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from './api/axios';
 
 const Login = ({ onLogin }) => {
   const [role, setRole] = useState('staff');
@@ -12,13 +12,10 @@ const Login = ({ onLogin }) => {
     setError('');
     setLoading(true);
 
-    const loginPayload = {
-      role,
-      username,
-    };
+    const loginPayload = { role, username };
 
     try {
-      const response = await axios.post('REACT_APP_API_URL', loginPayload);
+      const response = await api.post('/api/auth/login', loginPayload);
 
       if (response.data?.token) {
         localStorage.setItem('token', response.data.token);
@@ -46,7 +43,6 @@ const Login = ({ onLogin }) => {
     <div style={styles.container}>
       <div style={styles.card}>
 
-        {/* ROLE TABS */}
         <div style={styles.tabContainer}>
           {['staff', 'admin'].map((r) => (
             <button
@@ -72,7 +68,6 @@ const Login = ({ onLogin }) => {
         {error && <div style={styles.errorBanner}>❌ {error}</div>}
 
         <form onSubmit={handleSubmit}>
-
           <div style={styles.inputGroup}>
             <label style={styles.label}>
               {role === 'staff' ? 'Staff Username' : 'Admin Username'}
@@ -98,8 +93,8 @@ const Login = ({ onLogin }) => {
           >
             {loading ? 'Authenticating...' : `Login as ${role.toUpperCase()}`}
           </button>
-
         </form>
+
       </div>
     </div>
   );
@@ -109,40 +104,3 @@ const styles = {
   container: {
     display: 'flex', justifyContent: 'center', alignItems: 'center',
     height: '100vh', backgroundColor: '#ecf0f1',
-    fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-  },
-  card: {
-    width: '100%', maxWidth: '400px', backgroundColor: '#ffffff',
-    padding: '35px', borderRadius: '8px',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.08)'
-  },
-  tabContainer: {
-    display: 'flex', backgroundColor: '#f4f6f7', borderRadius: '6px',
-    padding: '4px', marginBottom: '25px', border: '1px solid #dcdde1'
-  },
-  tabButton: {
-    flex: 1, padding: '10px', border: 'none', borderRadius: '4px',
-    fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s ease'
-  },
-  title: { textAlign: 'center', margin: '0 0 5px 0', color: '#2c3e50', fontSize: '1.4rem' },
-  subtitle: { textAlign: 'center', margin: '0 0 25px 0', color: '#7f8c8d', fontSize: '0.85rem' },
-  errorBanner: {
-    backgroundColor: '#fde8e8', color: '#e74c3c', padding: '10px',
-    borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center',
-    marginBottom: '20px', border: '1px solid #f8b4b4', fontWeight: '500'
-  },
-  inputGroup: { marginBottom: '18px' },
-  label: { display: 'block', marginBottom: '6px', color: '#34495e', fontSize: '0.85rem', fontWeight: 'bold' },
-  input: {
-    width: '100%', padding: '10px', borderRadius: '4px',
-    border: '1px solid #cccccc', fontSize: '0.95rem',
-    boxSizing: 'border-box', outline: 'none'
-  },
-  submitButton: {
-    width: '100%', padding: '12px', color: '#ffffff', border: 'none',
-    borderRadius: '4px', fontSize: '0.95rem', fontWeight: 'bold',
-    cursor: 'pointer', marginTop: '10px', transition: 'opacity 0.2s'
-  }
-};
-
-export default Login;
