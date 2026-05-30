@@ -55,7 +55,7 @@ const Login = ({ onLogin }) => {
                 color: role === r ? '#fff' : '#7f8c8d',
               }}
             >
-              {r === 'staff' ? '📱 Staff Login' : '🔑 Admin Login'}
+              {r === 'staff' ? 'Staff Login' : 'Admin Login'}
             </button>
           ))}
         </div>
@@ -65,7 +65,7 @@ const Login = ({ onLogin }) => {
         </h2>
         <p style={styles.subtitle}>Enter your username to continue</p>
 
-        {error && <div style={styles.errorBanner}>❌ {error}</div>}
+        {error && <div style={styles.errorBanner}>{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div style={styles.inputGroup}>
@@ -91,7 +91,7 @@ const Login = ({ onLogin }) => {
               opacity: loading ? 0.7 : 1,
             }}
           >
-            {loading ? 'Authenticating...' : `Login as ${role.toUpperCase()}`}
+            {loading ? 'Authenticating...' : 'Login as ' + role.toUpperCase()}
           </button>
         </form>
 
@@ -102,5 +102,14 @@ const Login = ({ onLogin }) => {
 
 const styles = {
   container: {
-    display: 'flex', justifyContent: 'center', alignItems: 'center',
-    height: '100vh', backgroundColor: '#ecf0f1',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    backgroundColor: '#ecf0f1',
+    fontFamily: 'Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+  },
+  card: {
+    width: '350px',
+    padding: '30px',
+    borderRadius: '8px',
