@@ -17,17 +17,17 @@ const Login = ({ onLogin }) => {
     try {
       const response = await api.post('/api/auth/login', loginPayload);
 
-      if (response.data?.token) {
+      if (response.data && response.data.token) {
         localStorage.setItem('token', response.data.token);
         onLogin({
-          token:    response.data.token,
-          role:     response.data.role,
+          token: response.data.token,
+          role: response.data.role,
           username: response.data.username,
         });
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Authentication failed. Please try again.');
+      setError((err.response && err.response.data && err.response.data.message) || 'Authentication failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -44,20 +44,21 @@ const Login = ({ onLogin }) => {
       <div style={styles.card}>
 
         <div style={styles.tabContainer}>
-          {['staff', 'admin'].map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => handleTabChange(r)}
-              style={{
-                ...styles.tabButton,
-                backgroundColor: role === r ? (r === 'admin' ? '#007bff' : '#2c3e50') : '#f4f6f7',
-                color: role === r ? '#fff' : '#7f8c8d',
-              }}
-            >
-              {r === 'staff' ? 'Staff Login' : 'Admin Login'}
-            </button>
-          ))}
+          {['staff', 'admin'].map(function(r) {
+            return (
+              <button
+                key={r}
+                type="button"
+                onClick={function() { handleTabChange(r); }}
+                style={Object.assign({}, styles.tabButton, {
+                  backgroundColor: role === r ? (r === 'admin' ? '#007bff' : '#2c3e50') : '#f4f6f7',
+                  color: role === r ? '#fff' : '#7f8c8d',
+                })}
+              >
+                {r === 'staff' ? 'Staff Login' : 'Admin Login'}
+              </button>
+            );
+          })}
         </div>
 
         <h2 style={styles.title}>
@@ -77,7 +78,7 @@ const Login = ({ onLogin }) => {
               required
               placeholder={role === 'staff' ? 'Your username' : 'e.g., admin'}
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={function(e) { setUsername(e.target.value); }}
               style={styles.input}
             />
           </div>
@@ -85,11 +86,10 @@ const Login = ({ onLogin }) => {
           <button
             type="submit"
             disabled={loading}
-            style={{
-              ...styles.submitButton,
+            style={Object.assign({}, styles.submitButton, {
               backgroundColor: role === 'admin' ? '#007bff' : '#2c3e50',
               opacity: loading ? 0.7 : 1,
-            }}
+            })}
           >
             {loading ? 'Authenticating...' : 'Login as ' + role.toUpperCase()}
           </button>
@@ -100,16 +100,92 @@ const Login = ({ onLogin }) => {
   );
 };
 
-const styles = {
+var styles = {
   container: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     height: '100vh',
     backgroundColor: '#ecf0f1',
-    fontFamily: 'Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+    fontFamily: 'Segoe UI, Roboto, Helvetica, Arial, sans-serif'
   },
   card: {
-    width: '350px',
-    padding: '30px',
+    width: '100%',
+    maxWidth: '400px',
+    backgroundColor: '#ffffff',
+    padding: '35px',
     borderRadius: '8px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.08)'
+  },
+  tabContainer: {
+    display: 'flex',
+    backgroundColor: '#f4f6f7',
+    borderRadius: '6px',
+    padding: '4px',
+    marginBottom: '25px',
+    border: '1px solid #dcdde1'
+  },
+  tabButton: {
+    flex: 1,
+    padding: '10px',
+    border: 'none',
+    borderRadius: '4px',
+    fontWeight: 'bold',
+    cursor: 'pointer'
+  },
+  title: {
+    textAlign: 'center',
+    margin: '0 0 5px 0',
+    color: '#2c3e50',
+    fontSize: '1.4rem'
+  },
+  subtitle: {
+    textAlign: 'center',
+    margin: '0 0 25px 0',
+    color: '#7f8c8d',
+    fontSize: '0.85rem'
+  },
+  errorBanner: {
+    backgroundColor: '#fde8e8',
+    color: '#e74c3c',
+    padding: '10px',
+    borderRadius: '4px',
+    fontSize: '0.85rem',
+    textAlign: 'center',
+    marginBottom: '20px',
+    border: '1px solid #f8b4b4',
+    fontWeight: '500'
+  },
+  inputGroup: {
+    marginBottom: '18px'
+  },
+  label: {
+    display: 'block',
+    marginBottom: '6px',
+    color: '#34495e',
+    fontSize: '0.85rem',
+    fontWeight: 'bold'
+  },
+  input: {
+    width: '100%',
+    padding: '10px',
+    borderRadius: '4px',
+    border: '1px solid #cccccc',
+    fontSize: '0.95rem',
+    boxSizing: 'border-box',
+    outline: 'none'
+  },
+  submitButton: {
+    width: '100%',
+    padding: '12px',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '0.95rem',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    marginTop: '10px'
+  }
+};
+
+export default Login;
