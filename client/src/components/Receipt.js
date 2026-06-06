@@ -6,42 +6,66 @@ function Receipt({ saleDetails, onNewSale }) {
   return (
     <div style={styles.overlay}>
       <div style={styles.receiptPaper}>
-        <h2 style={styles.center}>HAMS LOUNGE</h2>
-        <p style={styles.center}>Nairobi, Kenya</p>
-        <p style={styles.center}>--------------------------------</p>
-        <p><strong>Date:</strong> {new Date().toLocaleString()}</p>
-        <p><strong>Method:</strong> {saleDetails.paymentMethod}</p>
-        <p style={styles.center}>--------------------------------</p>
-        
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.left}>Item</th>
-              <th>Qty</th>
-              <th style={styles.right}>Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            {saleDetails.items.map((item, index) => (
-              <tr key={index}>
-                <td style={styles.left}>{item.name}</td>
-                <td style={styles.center}>{item.quantity}</td>
-                <td style={styles.right}>{(item.price * item.quantity).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <style>{`
+          @media print {
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body * { visibility: hidden; }
+            .receipt-printable, .receipt-printable * { visibility: visible; }
+            .receipt-printable {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 80mm;
+              padding: 5mm;
+              font-size: 12px;
+              font-family: 'Courier New', monospace;
+            }
+            .no-print { display: none !important; }
+          }
+        `}</style>
 
-        <p style={styles.center}>--------------------------------</p>
-        <h3 style={styles.totalRow}>
-          <span>TOTAL:</span>
-          <span>KES {saleDetails.totalAmount.toLocaleString()}</span>
-        </h3>
-        <p style={styles.center}>--------------------------------</p>
-        <p style={styles.center}>Thank you for your business!</p>
-        
-        <div style={styles.noPrint}>
-          <button onClick={() => window.print()} style={styles.printBtn}>Print Receipt</button>
+        <div className="receipt-printable">
+          <h2 style={styles.center}>HAMS LOUNGE</h2>
+          <p style={styles.center}>Nairobi, Kenya</p>
+          <p style={styles.center}>--------------------------------</p>
+          <p><strong>Date:</strong> {new Date().toLocaleString()}</p>
+          <p><strong>Method:</strong> {saleDetails.paymentMethod}</p>
+          <p style={styles.center}>--------------------------------</p>
+
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.left}>Item</th>
+                <th style={styles.center}>Qty</th>
+                <th style={styles.right}>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              {saleDetails.items.map((item, index) => (
+                <tr key={index}>
+                  <td style={styles.left}>{item.name}</td>
+                  <td style={styles.center}>{item.quantity}</td>
+                  <td style={styles.right}>{(item.price * item.quantity).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <p style={styles.center}>--------------------------------</p>
+          <h3 style={styles.totalRow}>
+            <span>TOTAL:</span>
+            <span>KES {saleDetails.totalAmount.toLocaleString()}</span>
+          </h3>
+          <p style={styles.center}>--------------------------------</p>
+          <p style={styles.center}>Thank you for your business!</p>
+        </div>
+
+        {/* Buttons hidden on print */}
+        <div className="no-print" style={styles.noPrint}>
+          <button onClick={() => window.print()} style={styles.printBtn}>🖨️ Print Receipt</button>
           <button onClick={onNewSale} style={styles.closeBtn}>Next Sale</button>
         </div>
       </div>
@@ -59,7 +83,6 @@ const styles = {
   totalRow: { display: 'flex', justifyContent: 'space-between', marginTop: '10px' },
   printBtn: { width: '100%', padding: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', marginBottom: '5px', cursor: 'pointer' },
   closeBtn: { width: '100%', padding: '10px', backgroundColor: '#333', color: 'white', border: 'none', cursor: 'pointer' },
-  // This CSS hide buttons when the actual print window opens
   noPrint: { marginTop: '20px', display: 'block' }
 };
 
