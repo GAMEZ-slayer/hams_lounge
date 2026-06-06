@@ -13,7 +13,7 @@ exports.login = async (req, res) => {
     }
 
     const [userRows] = await sequelize.query(
-      'SELECT * FROM Users WHERE username = ? LIMIT 1',
+      'SELECT * FROM users WHERE username = ? LIMIT 1',  // ← fixed lowercase
       { replacements: [username] }
     );
 
@@ -23,7 +23,6 @@ exports.login = async (req, res) => {
 
     const user = userRows[0];
 
-    // Still enforce role match — admin can't login as staff and vice versa
     if (role && user.role !== role) {
       return res.status(403).json({
         message: `Access Denied: This account is not registered as ${role.toUpperCase()}.`
