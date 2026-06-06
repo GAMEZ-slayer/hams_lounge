@@ -6,8 +6,6 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
   const [cart, setCart] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [message, setMessage] = useState('');
-  
-  // States to handle receipt generation tracking
   const [showReceipt, setShowReceipt] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState(null);
 
@@ -26,11 +24,11 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
 
   const calculateSubtotal = () => {
     const totalPayableAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    return totalPayableAmount / 1.16; 
+    return totalPayableAmount / 1.16;
   };
 
   const calculateTax = (subtotal) => {
-    return subtotal * 0.16; 
+    return subtotal * 0.16;
   };
 
   const addToCart = (product) => {
@@ -48,25 +46,42 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
     });
   };
 
+  // ✅ NEW: Remove one unit or entire item from cart
+  const removeFromCart = (productId) => {
+    setCart(prevCart => {
+      const existing = prevCart.find(item => item.id === productId);
+      if (!existing) return prevCart;
+      if (existing.quantity === 1) {
+        return prevCart.filter(item => item.id !== productId);
+      }
+      return prevCart.map(item => item.id === productId ? { ...item, quantity: item.quantity - 1 } : item);
+    });
+  };
+
+  // ✅ NEW: Remove entire item from cart regardless of quantity
+  const removeItemFully = (productId) => {
+    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+  };
+
   const handleCheckout = async () => {
     if (cart.length === 0) return alert("Cart is empty!");
-    
+
     let finalPaymentMethod = paymentMethod;
     const subtotalSnapshot = calculateSubtotal();
     const taxSnapshot = calculateTax(subtotalSnapshot);
-    const finalTotalSnapshot = subtotalSnapshot + taxSnapshot; 
+    const finalTotalSnapshot = subtotalSnapshot + taxSnapshot;
     const receiptItemsSnapshot = [...cart];
 
     try {
       const response = await api.post('/sales', {
         items: cart,
-        total_amount: finalTotalSnapshot, 
+        total_amount: finalTotalSnapshot,
         payment_method: finalPaymentMethod,
-        phone_number: null 
+        phone_number: null
       });
 
       setMessage("🎉 Sale completed successfully!");
-      
+
       setCurrentReceipt({
         id: response.data.saleId || Math.floor(1000 + Math.random() * 9000),
         date: new Date().toLocaleString('en-KE'),
@@ -77,11 +92,11 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
         payment: finalPaymentMethod,
         servedBy: user.username
       });
-      
+
       setShowReceipt(true);
-      setCart([]); 
-      fetchProducts(); 
-      
+      setCart([]);
+      fetchProducts();
+
       if (onSaleComplete) onSaleComplete();
       setTimeout(() => setMessage(''), 4000);
     } catch (err) {
@@ -89,18 +104,14 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
     }
   };
 
-  // --- BULLETPROOF IFRAME PRINT ENGINE CONTROL ---
   const handlePrintReceipt = () => {
     const receiptHtml = document.getElementById("printable-receipt-content").innerHTML;
-    
-    // Create a temporary hidden iframe element container
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.width = '0px';
     iframe.style.height = '0px';
     iframe.style.border = 'none';
     document.body.appendChild(iframe);
-    
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`
@@ -108,17 +119,8 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
         <head>
           <title>Print Receipt</title>
           <style>
-            @page {
-              margin: 0;
-            }
-            body {
-              font-family: 'Courier New', Courier, monospace;
-              padding: 10px;
-              margin: 0;
-              width: 300px;
-              color: #000;
-              background-color: #fff;
-            }
+            @page { margin: 0; }
+            body { font-family: 'Courier New', Courier, monospace; padding: 10px; margin: 0; width: 300px; color: #000; background-color: #fff; }
             h2, p { margin: 0; text-align: center; }
             .dashed-line { border-bottom: 2px dashed #000; margin: 10px 0; }
             .thin-line { border-bottom: 1px dashed #000; margin: 8px 0; }
@@ -144,20 +146,20 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
 
   const currentSubtotal = calculateSubtotal();
   const currentTax = calculateTax(currentSubtotal);
-  const currentTotal = currentSubtotal + currentTax; 
+  const currentTotal = currentSubtotal + currentTax;
 
   return (
     <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
-      
+
       {/* LEFT COLUMN: STOCK SHELF GRID */}
       <div style={{ flex: 2, backgroundColor: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
         <h3 style={{ color: '#2c3e50', borderBottom: '2px solid #ecf0f1', paddingBottom: '10px' }}>🍺 Bar Drink Counter Stock</h3>
         {message && <div style={{ backgroundColor: '#d4edda', color: '#155724', padding: '10px', borderRadius: '4px', marginBottom: '15px' }}>{message}</div>}
-        
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px', marginTop: '15px' }}>
           {products.map(product => (
-            <div 
-              key={product.id} 
+            <div
+              key={product.id}
               onClick={() => addToCart(product)}
               style={{
                 padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #e2e8f0',
@@ -184,9 +186,33 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
           ) : (
             <div style={{ marginTop: '15px' }}>
               {cart.map(item => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed #eee', fontSize: '0.95rem' }}>
-                  <span>{item.name} <strong>x {item.quantity}</strong></span>
-                  <span style={{ fontWeight: 'bold' }}>KSh {(item.price * item.quantity).toLocaleString()}</span>
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px dashed #eee', fontSize: '0.95rem' }}>
+                  
+                  {/* Item name and quantity controls */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {/* ✅ Decrease quantity button */}
+                    <button
+                      onClick={() => removeFromCart(item.id)}
+                      style={{ width: '24px', height: '24px', backgroundColor: '#e74c3c', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', lineHeight: 1 }}
+                    >−</button>
+                    <span>{item.name} <strong>x {item.quantity}</strong></span>
+                    {/* ✅ Increase quantity button */}
+                    <button
+                      onClick={() => addToCart(item)}
+                      style={{ width: '24px', height: '24px', backgroundColor: '#27ae60', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', lineHeight: 1 }}
+                    >+</button>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 'bold' }}>KSh {(item.price * item.quantity).toLocaleString()}</span>
+                    {/* ✅ Remove entire item button */}
+                    <button
+                      onClick={() => removeItemFully(item.id)}
+                      title="Remove item"
+                      style={{ backgroundColor: 'transparent', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '1rem', padding: '0' }}
+                    >🗑️</button>
+                  </div>
+
                 </div>
               ))}
             </div>
@@ -198,7 +224,7 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
             <span>Subtotal (Excl. Tax):</span>
             <span>KSh {currentSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-          
+
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: '#7f8c8d', marginBottom: '10px' }}>
             <span>VAT (16% Included):</span>
             <span>KSh {currentTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -211,8 +237,8 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
 
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', color: '#7f8c8d', marginBottom: '5px' }}>PAYMENT METHOD:</label>
-            <select 
-              value={paymentMethod} 
+            <select
+              value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
               style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', fontWeight: 'bold' }}
             >
@@ -222,7 +248,7 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
             </select>
           </div>
 
-          <button 
+          <button
             onClick={handleCheckout}
             disabled={cart.length === 0}
             style={{
@@ -236,12 +262,10 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
         </div>
       </div>
 
-      {/* --- RECEIPT MODAL INTERFACE POPUP LAYER --- */}
+      {/* RECEIPT MODAL */}
       {showReceipt && currentReceipt && (
         <div style={modalStyles.overlay}>
           <div style={modalStyles.receiptPaper}>
-            
-            {/* The Print Engine targets this content block specifically */}
             <div id="printable-receipt-content">
               <div>
                 <h2>🍻 HAMS LOUNGE</h2>
@@ -249,7 +273,6 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
                 <p style={{ fontSize: '0.85rem', fontWeight: 'bold', marginTop: '3px' }}>CUSTOMER RECEIPT</p>
                 <div className="dashed-line" style={{ borderBottom: '2px dashed #2c3e50', marginTop: '10px' }}></div>
               </div>
-
               <div style={{ fontSize: '0.85rem', lineHeight: '1.5', marginBottom: '10px' }}>
                 <div className="flex-row"><span><strong>Receipt ID:</strong></span> <span>#HAMS-{currentReceipt.id}</span></div>
                 <div className="flex-row"><span><strong>Date/Time:</strong></span> <span>{currentReceipt.date}</span></div>
@@ -257,7 +280,6 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
                 <div className="flex-row"><span><strong>Payment Mode:</strong></span> <span>{currentReceipt.payment}</span></div>
                 <div className="thin-line" style={{ borderBottom: '1px dashed #ccc', marginTop: '8px' }}></div>
               </div>
-
               <div style={{ margin: '15px 0' }}>
                 <div className="flex-row bold" style={{ fontWeight: 'bold', marginBottom: '5px' }}>
                   <span>Item Description</span>
@@ -271,7 +293,6 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
                 ))}
                 <div className="thin-line" style={{ borderBottom: '1px dashed #ccc', marginTop: '10px' }}></div>
               </div>
-
               <div style={{ fontSize: '0.85rem', lineHeight: '1.6', margin: '5px 0' }}>
                 <div className="flex-row">
                   <span>Subtotal amount:</span>
@@ -283,18 +304,14 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
                 </div>
                 <div className="dashed-line" style={{ borderBottom: '2px dashed #2c3e50', marginTop: '10px' }}></div>
               </div>
-
               <div className="total-row" style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: '10px 0' }}>
                 <span>TOTAL PAID:</span>
                 <span style={{ color: '#27ae60' }}>KSh {currentReceipt.total.toLocaleString()}</span>
               </div>
-
               <p style={{ fontSize: '0.8rem', color: '#7f8c8d', marginTop: '20px', fontStyle: 'italic', textAlign: 'center' }}>
                 Thank you for visiting Hams Lounge!<br />Welcome again. 🥂
               </p>
             </div>
-
-            {/* Modal Action Buttons Row */}
             <div style={{ display: 'flex', gap: '10px', marginTop: '25px' }}>
               <button onClick={handlePrintReceipt} style={{ flex: 1, padding: '10px', backgroundColor: '#3498db', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>
                 🖨️ Print Receipt
@@ -303,7 +320,6 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
                 ❌ Close Window
               </button>
             </div>
-
           </div>
         </div>
       )}
