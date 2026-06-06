@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from './api';
 
+const CATEGORIES = ['All', 'Beer', 'Whiskey', 'Brandy', 'Soft Drink'];
+
 function Dashboard({ user, onLogout, onSaleComplete }) {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [message, setMessage] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
   const [showReceipt, setShowReceipt] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState(null);
 
@@ -27,9 +30,7 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
     return totalPayableAmount / 1.16;
   };
 
-  const calculateTax = (subtotal) => {
-    return subtotal * 0.16;
-  };
+  const calculateTax = (subtotal) => subtotal * 0.16;
 
   const addToCart = (product) => {
     if (product.stock <= 0) return alert("Out of stock!");
@@ -46,19 +47,15 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
     });
   };
 
-  // ✅ NEW: Remove one unit or entire item from cart
   const removeFromCart = (productId) => {
     setCart(prevCart => {
       const existing = prevCart.find(item => item.id === productId);
       if (!existing) return prevCart;
-      if (existing.quantity === 1) {
-        return prevCart.filter(item => item.id !== productId);
-      }
+      if (existing.quantity === 1) return prevCart.filter(item => item.id !== productId);
       return prevCart.map(item => item.id === productId ? { ...item, quantity: item.quantity - 1 } : item);
     });
   };
 
-  // ✅ NEW: Remove entire item from cart regardless of quantity
   const removeItemFully = (productId) => {
     setCart(prevCart => prevCart.filter(item => item.id !== productId));
   };
@@ -66,7 +63,6 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
   const handleCheckout = async () => {
     if (cart.length === 0) return alert("Cart is empty!");
 
-    let finalPaymentMethod = paymentMethod;
     const subtotalSnapshot = calculateSubtotal();
     const taxSnapshot = calculateTax(subtotalSnapshot);
     const finalTotalSnapshot = subtotalSnapshot + taxSnapshot;
@@ -76,12 +72,11 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
       const response = await api.post('/sales', {
         items: cart,
         total_amount: finalTotalSnapshot,
-        payment_method: finalPaymentMethod,
+        payment_method: paymentMethod,
         phone_number: null
       });
 
       setMessage("🎉 Sale completed successfully!");
-
       setCurrentReceipt({
         id: response.data.saleId || Math.floor(1000 + Math.random() * 9000),
         date: new Date().toLocaleString('en-KE'),
@@ -89,14 +84,13 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
         subtotal: subtotalSnapshot,
         tax: taxSnapshot,
         total: finalTotalSnapshot,
-        payment: finalPaymentMethod,
+        payment: paymentMethod,
         servedBy: user.username
       });
 
       setShowReceipt(true);
       setCart([]);
       fetchProducts();
-
       if (onSaleComplete) onSaleComplete();
       setTimeout(() => setMessage(''), 4000);
     } catch (err) {
@@ -119,14 +113,14 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
         <head>
           <title>Print Receipt</title>
           <style>
-            @page { margin: 0; }
-            body { font-family: 'Courier New', Courier, monospace; padding: 10px; margin: 0; width: 300px; color: #000; background-color: #fff; }
+            @page { size: 80mm auto; margin: 0; }
+            body { font-family: 'Courier New', Courier, monospace; padding: 5mm; margin: 0; width: 80mm; color: #000; background-color: #fff; font-size: 12px; }
             h2, p { margin: 0; text-align: center; }
             .dashed-line { border-bottom: 2px dashed #000; margin: 10px 0; }
             .thin-line { border-bottom: 1px dashed #000; margin: 8px 0; }
-            .flex-row { display: flex; justify-content: space-between; font-size: 13px; margin: 4px 0; }
+            .flex-row { display: flex; justify-content: space-between; font-size: 12px; margin: 4px 0; }
             .bold { font-weight: bold; }
-            .total-row { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; margin: 10px 0; }
+            .total-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin: 10px 0; }
           </style>
         </head>
         <body>
@@ -144,9 +138,16 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
     doc.close();
   };
 
+  const filteredProducts = activeCategory === 'All'
+    ? products
+    : products.filter(p => p.category === activeCategory);
+
   const currentSubtotal = calculateSubtotal();
   const currentTax = calculateTax(currentSubtotal);
   const currentTotal = currentSubtotal + currentTax;
+
+  // Category emoji mapping
+  const categoryEmoji = { 'All': '🍽️', 'Beer': '🍺', 'Whiskey': '🥃', 'Brandy': '🍷', 'Soft Drink': '🥤' };
 
   return (
     <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
@@ -156,28 +157,62 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
         <h3 style={{ color: '#2c3e50', borderBottom: '2px solid #ecf0f1', paddingBottom: '10px' }}>🍺 Bar Drink Counter Stock</h3>
         {message && <div style={{ backgroundColor: '#d4edda', color: '#155724', padding: '10px', borderRadius: '4px', marginBottom: '15px' }}>{message}</div>}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px', marginTop: '15px' }}>
-          {products.map(product => (
-            <div
-              key={product.id}
-              onClick={() => addToCart(product)}
+        {/* CATEGORY TABS */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
               style={{
-                padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #e2e8f0',
-                cursor: product.stock > 0 ? 'pointer' : 'not-allowed', opacity: product.stock > 0 ? 1 : 0.6,
-                textAlign: 'center', transition: '0.2s'
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: '2px solid',
+                borderColor: activeCategory === cat ? '#2c3e50' : '#e2e8f0',
+                backgroundColor: activeCategory === cat ? '#2c3e50' : '#f8f9fa',
+                color: activeCategory === cat ? '#fff' : '#2c3e50',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '0.85rem',
+                transition: '0.2s'
               }}
             >
-              <div style={{ fontWeight: 'bold', color: '#2c3e50' }}>{product.name}</div>
-              <div style={{ color: '#27ae60', fontWeight: 'bold', margin: '5px 0' }}>KSh {product.price}</div>
-              <div style={{ fontSize: '0.8rem', color: product.stock > 5 ? '#7f8c8d' : '#e74c3c' }}>
-                {product.stock > 0 ? `Stock: ${product.stock} units` : '🚫 Out of stock'}
-              </div>
-            </div>
+              {categoryEmoji[cat]} {cat}
+            </button>
           ))}
+        </div>
+
+        {/* PRODUCT GRID */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' }}>
+          {filteredProducts.length === 0 ? (
+            <p style={{ color: '#95a5a6', fontStyle: 'italic' }}>No products in this category.</p>
+          ) : (
+            filteredProducts.map(product => (
+              <div
+                key={product.id}
+                onClick={() => addToCart(product)}
+                style={{
+                  padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  cursor: product.stock > 0 ? 'pointer' : 'not-allowed',
+                  opacity: product.stock > 0 ? 1 : 0.6,
+                  textAlign: 'center', transition: '0.2s'
+                }}
+              >
+                <div style={{ fontSize: '0.7rem', color: '#fff', backgroundColor: '#7f8c8d', borderRadius: '10px', padding: '2px 8px', display: 'inline-block', marginBottom: '6px' }}>
+                  {categoryEmoji[product.category]} {product.category}
+                </div>
+                <div style={{ fontWeight: 'bold', color: '#2c3e50' }}>{product.name}</div>
+                <div style={{ color: '#27ae60', fontWeight: 'bold', margin: '5px 0' }}>KSh {product.price}</div>
+                <div style={{ fontSize: '0.8rem', color: product.stock > 5 ? '#7f8c8d' : '#e74c3c' }}>
+                  {product.stock > 0 ? `Stock: ${product.stock} units` : '🚫 Out of stock'}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* RIGHT COLUMN: CURRENT ACTIVE CART SYSTEM */}
+      {/* RIGHT COLUMN: CART */}
       <div style={{ flex: 1, backgroundColor: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '480px' }}>
         <div>
           <h3 style={{ color: '#2c3e50', borderBottom: '2px solid #ecf0f1', paddingBottom: '10px' }}>🛒 Current Bill Order</h3>
@@ -187,32 +222,15 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
             <div style={{ marginTop: '15px' }}>
               {cart.map(item => (
                 <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px dashed #eee', fontSize: '0.95rem' }}>
-                  
-                  {/* Item name and quantity controls */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {/* ✅ Decrease quantity button */}
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      style={{ width: '24px', height: '24px', backgroundColor: '#e74c3c', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', lineHeight: 1 }}
-                    >−</button>
+                    <button onClick={() => removeFromCart(item.id)} style={{ width: '24px', height: '24px', backgroundColor: '#e74c3c', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', lineHeight: 1 }}>−</button>
                     <span>{item.name} <strong>x {item.quantity}</strong></span>
-                    {/* ✅ Increase quantity button */}
-                    <button
-                      onClick={() => addToCart(item)}
-                      style={{ width: '24px', height: '24px', backgroundColor: '#27ae60', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', lineHeight: 1 }}
-                    >+</button>
+                    <button onClick={() => addToCart(item)} style={{ width: '24px', height: '24px', backgroundColor: '#27ae60', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', lineHeight: 1 }}>+</button>
                   </div>
-
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontWeight: 'bold' }}>KSh {(item.price * item.quantity).toLocaleString()}</span>
-                    {/* ✅ Remove entire item button */}
-                    <button
-                      onClick={() => removeItemFully(item.id)}
-                      title="Remove item"
-                      style={{ backgroundColor: 'transparent', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '1rem', padding: '0' }}
-                    >🗑️</button>
+                    <button onClick={() => removeItemFully(item.id)} title="Remove item" style={{ backgroundColor: 'transparent', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '1rem', padding: '0' }}>🗑️</button>
                   </div>
-
                 </div>
               ))}
             </div>
@@ -224,12 +242,10 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
             <span>Subtotal (Excl. Tax):</span>
             <span>KSh {currentSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: '#7f8c8d', marginBottom: '10px' }}>
             <span>VAT (16% Included):</span>
             <span>KSh {currentTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '15px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
             <span>Total Payable:</span>
             <span style={{ color: '#27ae60' }}>KSh {currentTotal.toLocaleString()}</span>
@@ -252,8 +268,10 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
             onClick={handleCheckout}
             disabled={cart.length === 0}
             style={{
-              width: '100%', padding: '12px', backgroundColor: cart.length > 0 ? '#27ae60' : '#95a5a6',
-              color: '#fff', border: 'none', borderRadius: '4px', cursor: cart.length > 0 ? 'pointer' : 'not-allowed',
+              width: '100%', padding: '12px',
+              backgroundColor: cart.length > 0 ? '#27ae60' : '#95a5a6',
+              color: '#fff', border: 'none', borderRadius: '4px',
+              cursor: cart.length > 0 ? 'pointer' : 'not-allowed',
               fontWeight: 'bold', fontSize: '1rem'
             }}
           >
@@ -271,40 +289,33 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
                 <h2>🍻 HAMS LOUNGE</h2>
                 <p style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>Nairobi, Kenya</p>
                 <p style={{ fontSize: '0.85rem', fontWeight: 'bold', marginTop: '3px' }}>CUSTOMER RECEIPT</p>
-                <div className="dashed-line" style={{ borderBottom: '2px dashed #2c3e50', marginTop: '10px' }}></div>
+                <div style={{ borderBottom: '2px dashed #2c3e50', marginTop: '10px' }}></div>
               </div>
               <div style={{ fontSize: '0.85rem', lineHeight: '1.5', marginBottom: '10px' }}>
-                <div className="flex-row"><span><strong>Receipt ID:</strong></span> <span>#HAMS-{currentReceipt.id}</span></div>
-                <div className="flex-row"><span><strong>Date/Time:</strong></span> <span>{currentReceipt.date}</span></div>
-                <div className="flex-row"><span><strong>Served By:</strong></span> <span>{currentReceipt.servedBy}</span></div>
-                <div className="flex-row"><span><strong>Payment Mode:</strong></span> <span>{currentReceipt.payment}</span></div>
-                <div className="thin-line" style={{ borderBottom: '1px dashed #ccc', marginTop: '8px' }}></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span><strong>Receipt ID:</strong></span><span>#HAMS-{currentReceipt.id}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span><strong>Date/Time:</strong></span><span>{currentReceipt.date}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span><strong>Served By:</strong></span><span>{currentReceipt.servedBy}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span><strong>Payment:</strong></span><span>{currentReceipt.payment}</span></div>
+                <div style={{ borderBottom: '1px dashed #ccc', marginTop: '8px' }}></div>
               </div>
               <div style={{ margin: '15px 0' }}>
-                <div className="flex-row bold" style={{ fontWeight: 'bold', marginBottom: '5px' }}>
-                  <span>Item Description</span>
-                  <span>Subtotal</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginBottom: '5px' }}>
+                  <span>Item</span><span>Subtotal</span>
                 </div>
                 {currentReceipt.items.map((item, index) => (
-                  <div key={index} className="flex-row" style={{ fontSize: '0.85rem', margin: '4px 0' }}>
+                  <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', margin: '4px 0' }}>
                     <span>{item.name} (x{item.quantity})</span>
                     <span>KSh {(item.price * item.quantity).toLocaleString()}</span>
                   </div>
                 ))}
-                <div className="thin-line" style={{ borderBottom: '1px dashed #ccc', marginTop: '10px' }}></div>
+                <div style={{ borderBottom: '1px dashed #ccc', marginTop: '10px' }}></div>
               </div>
               <div style={{ fontSize: '0.85rem', lineHeight: '1.6', margin: '5px 0' }}>
-                <div className="flex-row">
-                  <span>Subtotal amount:</span>
-                  <span>KSh {currentReceipt.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex-row">
-                  <span>VAT (16% Included):</span>
-                  <span>KSh {currentReceipt.tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="dashed-line" style={{ borderBottom: '2px dashed #2c3e50', marginTop: '10px' }}></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal:</span><span>KSh {currentReceipt.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>VAT (16%):</span><span>KSh {currentReceipt.tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                <div style={{ borderBottom: '2px dashed #2c3e50', marginTop: '10px' }}></div>
               </div>
-              <div className="total-row" style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: '10px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 'bold', margin: '10px 0' }}>
                 <span>TOTAL PAID:</span>
                 <span style={{ color: '#27ae60' }}>KSh {currentReceipt.total.toLocaleString()}</span>
               </div>
@@ -313,12 +324,8 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
               </p>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '25px' }}>
-              <button onClick={handlePrintReceipt} style={{ flex: 1, padding: '10px', backgroundColor: '#3498db', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>
-                🖨️ Print Receipt
-              </button>
-              <button onClick={() => setShowReceipt(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#e74c3c', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>
-                ❌ Close Window
-              </button>
+              <button onClick={handlePrintReceipt} style={{ flex: 1, padding: '10px', backgroundColor: '#3498db', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>🖨️ Print Receipt</button>
+              <button onClick={() => setShowReceipt(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#e74c3c', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>❌ Close</button>
             </div>
           </div>
         </div>
