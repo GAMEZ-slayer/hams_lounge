@@ -29,7 +29,7 @@ function Receipt({ saleDetails, onNewSale }) {
 
         <div className="receipt-printable">
           <h2 style={styles.center}>HAMS LOUNGE</h2>
-          <p style={styles.center}>Nairobi, Kenya</p>
+          <p style={styles.center}>Chaaria, Meru</p>
           <p style={styles.center}>--------------------------------</p>
           <p><strong>Date:</strong> {new Date().toLocaleString()}</p>
           <p><strong>Method:</strong> {saleDetails.paymentMethod}</p>

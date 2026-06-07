@@ -4,6 +4,7 @@ import api from './api/axios';
 const Login = ({ onLogin }) => {
   const [role, setRole] = useState('staff');
   const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,9 +16,9 @@ const Login = ({ onLogin }) => {
 
     const loginPayload = {
       role,
-      username,
-      password: role === 'admin' ? password : undefined,
-      pin:      role === 'staff' ? password : undefined,
+      username: role === 'admin' ? username : 'staff', // staff always uses fixed 'staff' account
+      name: role === 'staff' ? name : undefined,        // staff provides their real name
+      password,
     };
 
     try {
@@ -28,12 +29,12 @@ const Login = ({ onLogin }) => {
         onLogin({
           token:    response.data.token,
           role:     response.data.role,
-          username: response.data.username,
+          username: role === 'staff' ? name : response.data.username, // use typed name for staff
         });
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError((err.response && err.response.data && err.response.data.message) || 'Authentication failed. Please check your credentials.');
+      setError((err.response?.data?.message) || 'Authentication failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -42,6 +43,7 @@ const Login = ({ onLogin }) => {
   const handleTabChange = (selectedRole) => {
     setRole(selectedRole);
     setUsername('');
+    setName('');
     setPassword('');
     setError('');
   };
@@ -51,46 +53,59 @@ const Login = ({ onLogin }) => {
       <div style={styles.card}>
 
         <div style={styles.tabContainer}>
-          {['staff', 'admin'].map(function(r) {
-            return (
-              <button
-                key={r}
-                type="button"
-                onClick={function() { handleTabChange(r); }}
-                style={Object.assign({}, styles.tabButton, {
-                  backgroundColor: role === r ? (r === 'admin' ? '#007bff' : '#2c3e50') : '#f4f6f7',
-                  color: role === r ? '#fff' : '#7f8c8d',
-                })}
-              >
-                {r === 'staff' ? 'Staff Login' : 'Admin Login'}
-              </button>
-            );
-          })}
+          {['staff', 'admin'].map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => handleTabChange(r)}
+              style={{
+                ...styles.tabButton,
+                backgroundColor: role === r ? (r === 'admin' ? '#007bff' : '#2c3e50') : '#f4f6f7',
+                color: role === r ? '#fff' : '#7f8c8d',
+              }}
+            >
+              {r === 'staff' ? 'Staff Login' : 'Admin Login'}
+            </button>
+          ))}
         </div>
 
         <h2 style={styles.title}>
           {role === 'admin' ? 'Administrative Portal' : 'Hams Lounge Staff'}
         </h2>
         <p style={styles.subtitle}>
-          {role === 'admin' ? 'Enter your admin credentials' : 'Enter your username and PIN'}
+          {role === 'admin' ? 'Enter your admin credentials' : 'Enter your name and PIN'}
         </p>
 
         {error && <div style={styles.errorBanner}>{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>
-              {role === 'staff' ? 'Staff Username' : 'Admin Username'}
-            </label>
-            <input
-              type="text"
-              required
-              placeholder={role === 'staff' ? 'Your username' : 'e.g., admin'}
-              value={username}
-              onChange={function(e) { setUsername(e.target.value); }}
-              style={styles.input}
-            />
-          </div>
+
+          {/* Staff: show Name field. Admin: show Username field */}
+          {role === 'staff' ? (
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Your Name</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+          ) : (
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Admin Username</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. admin"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+          )}
 
           <div style={styles.inputGroup}>
             <label style={styles.label}>
@@ -101,7 +116,7 @@ const Login = ({ onLogin }) => {
               required
               placeholder={role === 'staff' ? '••••' : '••••••••'}
               value={password}
-              onChange={function(e) { setPassword(e.target.value); }}
+              onChange={(e) => setPassword(e.target.value)}
               style={styles.input}
             />
           </div>
@@ -109,10 +124,11 @@ const Login = ({ onLogin }) => {
           <button
             type="submit"
             disabled={loading}
-            style={Object.assign({}, styles.submitButton, {
+            style={{
+              ...styles.submitButton,
               backgroundColor: role === 'admin' ? '#007bff' : '#2c3e50',
               opacity: loading ? 0.7 : 1,
-            })}
+            }}
           >
             {loading ? 'Authenticating...' : 'Login as ' + role.toUpperCase()}
           </button>
@@ -123,92 +139,18 @@ const Login = ({ onLogin }) => {
   );
 };
 
-var styles = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-    backgroundColor: '#ecf0f1',
-    fontFamily: 'Segoe UI, Roboto, Helvetica, Arial, sans-serif'
-  },
-  card: {
-    width: '100%',
-    maxWidth: '400px',
-    backgroundColor: '#ffffff',
-    padding: '35px',
-    borderRadius: '8px',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.08)'
-  },
-  tabContainer: {
-    display: 'flex',
-    backgroundColor: '#f4f6f7',
-    borderRadius: '6px',
-    padding: '4px',
-    marginBottom: '25px',
-    border: '1px solid #dcdde1'
-  },
-  tabButton: {
-    flex: 1,
-    padding: '10px',
-    border: 'none',
-    borderRadius: '4px',
-    fontWeight: 'bold',
-    cursor: 'pointer'
-  },
-  title: {
-    textAlign: 'center',
-    margin: '0 0 5px 0',
-    color: '#2c3e50',
-    fontSize: '1.4rem'
-  },
-  subtitle: {
-    textAlign: 'center',
-    margin: '0 0 25px 0',
-    color: '#7f8c8d',
-    fontSize: '0.85rem'
-  },
-  errorBanner: {
-    backgroundColor: '#fde8e8',
-    color: '#e74c3c',
-    padding: '10px',
-    borderRadius: '4px',
-    fontSize: '0.85rem',
-    textAlign: 'center',
-    marginBottom: '20px',
-    border: '1px solid #f8b4b4',
-    fontWeight: '500'
-  },
-  inputGroup: {
-    marginBottom: '18px'
-  },
-  label: {
-    display: 'block',
-    marginBottom: '6px',
-    color: '#34495e',
-    fontSize: '0.85rem',
-    fontWeight: 'bold'
-  },
-  input: {
-    width: '100%',
-    padding: '10px',
-    borderRadius: '4px',
-    border: '1px solid #cccccc',
-    fontSize: '0.95rem',
-    boxSizing: 'border-box',
-    outline: 'none'
-  },
-  submitButton: {
-    width: '100%',
-    padding: '12px',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '0.95rem',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    marginTop: '10px'
-  }
+const styles = {
+  container: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#ecf0f1', fontFamily: 'Segoe UI, Roboto, Helvetica, Arial, sans-serif' },
+  card: { width: '100%', maxWidth: '400px', backgroundColor: '#ffffff', padding: '35px', borderRadius: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' },
+  tabContainer: { display: 'flex', backgroundColor: '#f4f6f7', borderRadius: '6px', padding: '4px', marginBottom: '25px', border: '1px solid #dcdde1' },
+  tabButton: { flex: 1, padding: '10px', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' },
+  title: { textAlign: 'center', margin: '0 0 5px 0', color: '#2c3e50', fontSize: '1.4rem' },
+  subtitle: { textAlign: 'center', margin: '0 0 25px 0', color: '#7f8c8d', fontSize: '0.85rem' },
+  errorBanner: { backgroundColor: '#fde8e8', color: '#e74c3c', padding: '10px', borderRadius: '4px', fontSize: '0.85rem', textAlign: 'center', marginBottom: '20px', border: '1px solid #f8b4b4', fontWeight: '500' },
+  inputGroup: { marginBottom: '18px' },
+  label: { display: 'block', marginBottom: '6px', color: '#34495e', fontSize: '0.85rem', fontWeight: 'bold' },
+  input: { width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #cccccc', fontSize: '0.95rem', boxSizing: 'border-box', outline: 'none' },
+  submitButton: { width: '100%', padding: '12px', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }
 };
 
 export default Login;
