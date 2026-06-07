@@ -4,6 +4,7 @@ import api from './api/axios';
 const Login = ({ onLogin }) => {
   const [role, setRole] = useState('staff');
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -12,7 +13,12 @@ const Login = ({ onLogin }) => {
     setError('');
     setLoading(true);
 
-    const loginPayload = { role, username };
+    const loginPayload = {
+      role,
+      username,
+      password: role === 'admin' ? password : undefined,
+      pin:      role === 'staff' ? password : undefined,
+    };
 
     try {
       const response = await api.post('/api/auth/login', loginPayload);
@@ -20,14 +26,14 @@ const Login = ({ onLogin }) => {
       if (response.data && response.data.token) {
         localStorage.setItem('token', response.data.token);
         onLogin({
-          token: response.data.token,
-          role: response.data.role,
+          token:    response.data.token,
+          role:     response.data.role,
           username: response.data.username,
         });
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError((err.response && err.response.data && err.response.data.message) || 'Authentication failed. Please try again.');
+      setError((err.response && err.response.data && err.response.data.message) || 'Authentication failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -36,6 +42,7 @@ const Login = ({ onLogin }) => {
   const handleTabChange = (selectedRole) => {
     setRole(selectedRole);
     setUsername('');
+    setPassword('');
     setError('');
   };
 
@@ -64,7 +71,9 @@ const Login = ({ onLogin }) => {
         <h2 style={styles.title}>
           {role === 'admin' ? 'Administrative Portal' : 'Hams Lounge Staff'}
         </h2>
-        <p style={styles.subtitle}>Enter your username to continue</p>
+        <p style={styles.subtitle}>
+          {role === 'admin' ? 'Enter your admin credentials' : 'Enter your username and PIN'}
+        </p>
 
         {error && <div style={styles.errorBanner}>{error}</div>}
 
@@ -79,6 +88,20 @@ const Login = ({ onLogin }) => {
               placeholder={role === 'staff' ? 'Your username' : 'e.g., admin'}
               value={username}
               onChange={function(e) { setUsername(e.target.value); }}
+              style={styles.input}
+            />
+          </div>
+
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>
+              {role === 'staff' ? 'Access PIN' : 'Password'}
+            </label>
+            <input
+              type="password"
+              required
+              placeholder={role === 'staff' ? '••••' : '••••••••'}
+              value={password}
+              onChange={function(e) { setPassword(e.target.value); }}
               style={styles.input}
             />
           </div>
