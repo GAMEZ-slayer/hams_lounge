@@ -16,8 +16,9 @@ const Login = ({ onLogin }) => {
 
     const loginPayload = {
       role,
-      username: role === 'admin' ? username : 'staff', // staff always uses fixed 'staff' account
-      name: role === 'staff' ? name : undefined,        // staff provides their real name
+      // OPTION B FIX: Send the custom typed name as the username if role is staff
+      username: role === 'admin' ? username : name, 
+      name: role === 'staff' ? name : undefined,        
       password,
     };
 
@@ -29,7 +30,7 @@ const Login = ({ onLogin }) => {
         onLogin({
           token:    response.data.token,
           role:     response.data.role,
-          username: role === 'staff' ? name : response.data.username, // use typed name for staff
+          username: role === 'staff' ? name : response.data.username, 
         });
       }
     } catch (err) {
