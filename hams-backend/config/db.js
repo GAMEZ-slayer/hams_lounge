@@ -1,26 +1,24 @@
-const { Sequelize, QueryTypes } = require('sequelize');
-const https = require('https');
-const crypto = require('crypto');
+const { Pool, types } = require('pg');
 
-// 1. Direct Database Connection
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASS, {
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  dialect: 'mysql',
-  logging: false
+// Parse PostgreSQL NUMERIC/DECIMAL as JavaScript float numbers
+types.setTypeParser(types.builtins.NUMERIC, (val) => parseFloat(val));
+
+// Create PostgreSQL connection pool
+const pool = new Pool({
+  host: process.env.PGHOST,
+  user: process.env.PGUSER,
+  database: process.env.PGDATABASE,
+  password: process.env.PGPASSWORD,
+  port: process.env.PGPORT || 5432,
 });
 
-// 2. TLS/SSL Agent Configuration
-const mpesaAgent = new https.Agent({
-  secureOptions: crypto.constants.SSL_OP_NO_TLSv1 | crypto.constants.SSL_OP_NO_TLSv1_1,
-  keepAlive: true
+// Test connection
+pool.on('connect', () => {
+  console.log('✅ PostgreSQL Connected');
 });
 
-module.exports = {
-  sequelize,
-  QueryTypes,
-  mpesaAgent
-};
+pool.on('error', (err) => {
+  console.error('❌ Unexpected PostgreSQL error:', err);
+});
+
+module.exports = pool;

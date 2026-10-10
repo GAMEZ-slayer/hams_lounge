@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from './api';
 
-// 1. Accepted the refreshTrigger prop passed from App.js
 function SalesHistory({ refreshTrigger }) {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // 2. Added refreshTrigger to the dependency array so it runs on every new checkout
   useEffect(() => {
     fetchSalesData();
   }, [refreshTrigger]);
@@ -16,8 +14,6 @@ function SalesHistory({ refreshTrigger }) {
     try {
       setLoading(true);
       setError('');
-      
-      // NOTE: Make sure your backend route maps to /sales/history or matches your backend configurations!
       const response = await api.get('/sales/history');
       setSales(response.data);
     } catch (err) {
@@ -27,104 +23,226 @@ function SalesHistory({ refreshTrigger }) {
     }
   };
 
-  // Calculate quick metrics
   const totalRevenue = sales.reduce((sum, sale) => sum + Number(sale.total_amount), 0);
   const mpesaRevenue = sales.filter(s => s.payment_method === 'M-Pesa').reduce((sum, s) => sum + Number(s.total_amount), 0);
   const cashRevenue = sales.filter(s => s.payment_method === 'Cash').reduce((sum, s) => sum + Number(s.total_amount), 0);
   const cardRevenue = sales.filter(s => s.payment_method === 'Card').reduce((sum, s) => sum + Number(s.total_amount), 0);
 
+  const metricCards = [
+    { label: 'Total Revenue', value: totalRevenue, color: '#c9a94e', gradient: 'linear-gradient(135deg, rgba(201,169,78,0.12), rgba(201,169,78,0.04))' },
+    { label: 'M-Pesa', value: mpesaRevenue, color: '#4fc3f7', gradient: 'linear-gradient(135deg, rgba(79,195,247,0.12), rgba(79,195,247,0.04))' },
+    { label: 'Cash', value: cashRevenue, color: '#6fcf97', gradient: 'linear-gradient(135deg, rgba(111,207,151,0.12), rgba(111,207,151,0.04))' },
+    { label: 'Card', value: cardRevenue, color: '#b39ddb', gradient: 'linear-gradient(135deg, rgba(179,157,219,0.12), rgba(179,157,219,0.04))' },
+  ];
 
   return (
     <div style={styles.container}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #2c3e50', paddingBottom: '10px' }}>
-        <h2>📊 Hams Lounge Sales Analytics Ledger</h2>
-        <button onClick={fetchSalesData} style={styles.refreshBtn}>🔄 Refresh Metrics</button>
+      {/* Header */}
+      <div style={styles.header}>
+        <h2 style={styles.headerTitle}>Sales Analytics</h2>
+        <button onClick={fetchSalesData} style={styles.refreshBtn}>Refresh</button>
       </div>
 
       {error && <div style={styles.errorAlert}>{error}</div>}
 
-      {/* Analytics Summary Cards Box Layout */}
+      {/* Metrics Cards */}
       <div style={styles.cardRow}>
-        <div style={{ ...styles.card, borderLeft: '5px solid #27ae60' }}>
-          <span style={styles.cardLabel}>Total Gross Revenue</span>
-          <h3 style={styles.cardValue}>KSh {totalRevenue.toLocaleString()}</h3>
-        </div>
-        <div style={{ ...styles.card, borderLeft: '5px solid #3498db' }}>
-          <span style={styles.cardLabel}>📱 M-Pesa Till Total</span>
-          <h3 style={{ ...styles.cardValue, color: '#3498db' }}>KSh {mpesaRevenue.toLocaleString()}</h3>
-        </div>
-        <div style={{ ...styles.card, borderLeft: '5px solid #f1c40f' }}>
-          <span style={styles.cardLabel}>💵 Cash Collection Total</span>
-          <h3 style={{ ...styles.cardValue, color: '#f39c12' }}>KSh {cashRevenue.toLocaleString()}</h3>
-        </div>
-        <div style={{ ...styles.card, borderLeft: '5px solid #9b59b6' }}>
-          <span style={styles.cardLabel}>💳 Card Transactions Total</span>
-          <h3 style={{ ...styles.cardValue, color: '#9b59b6' }}>KSh {cardRevenue.toLocaleString()}</h3>
-        </div>
+        {metricCards.map((card, i) => (
+          <div key={i} style={{ ...styles.card, background: card.gradient, borderColor: `${card.color}20` }}>
+            <span style={styles.cardLabel}>{card.label}</span>
+            <h3 style={{ ...styles.cardValue, color: card.color }}>KSh {card.value.toLocaleString()}</h3>
+            <div style={{ ...styles.cardAccent, backgroundColor: card.color }}></div>
+          </div>
+        ))}
       </div>
 
-      {/* Transaction Records Table Layout */}
-      <h3 style={{ marginTop: '30px', color: '#34495e' }}>Detailed Orders Ledger</h3>
-      {loading ? (
-        <p>Loading database sales index tables...</p>
-      ) : sales.length === 0 ? (
-        <p style={{ color: '#7f8c8d', fontStyle: 'italic' }}>No sales data logged in the database table history yet.</p>
-      ) : (
-        <table style={styles.table}>
-          <thead>
-            <tr style={{ backgroundColor: '#2c3e50', color: '#fff' }}>
-              <th style={styles.th}>Receipt ID</th>
-              <th style={styles.th}>Timestamp / Date</th>
-              <th style={styles.th}>Purchased Drink Items</th>
-              <th style={styles.th}>Payment Mode</th>
-              <th style={styles.th}>Total Paid</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sales.map((sale) => (
-              <tr key={sale.id} style={{ borderBottom: '1px solid #ddd' }}>
-                <td style={styles.td}><strong>#HAMS-{sale.id}</strong></td>
-                <td style={styles.td}>...</td>
-                <td style={styles.td}>
-                  <div style={{ fontSize: '0.9rem', color: '#2c3e50' }}>
-                    {sale.items_list || <span style={{ color: '#7f8c8d' }}>Generic Sale</span>}
-                  </div>
-                </td>
-                <td style={styles.td}>
-                  <span style={{ 
-                    padding: '4px 8px', 
-                    borderRadius: '4px', 
-                    fontSize: '0.8rem', 
-                    fontWeight: 'bold',
-                    backgroundColor: sale.payment_method === 'M-Pesa' ? '#e3f2fd' : '#fff3e0',
-                    color: sale.payment_method === 'M-Pesa' ? '#1e88e5' : '#f57c00'
-                  }}>
-                    {sale.payment_method}
-                  </span>
-                </td>
-                <td style={styles.td}>
-                  <span style={{ color: '#27ae60', fontWeight: 'bold' }}>KSh {Number(sale.total_amount).toLocaleString()}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      {/* Sales Table */}
+      <div style={styles.tableSection}>
+        <h3 style={styles.tableSectionTitle}>Transaction Ledger</h3>
+        {loading ? (
+          <p style={{ color: '#6a6a7e', padding: '20px' }}>Loading sales data...</p>
+        ) : sales.length === 0 ? (
+          <p style={{ color: '#5a5a6e', fontStyle: 'italic', padding: '20px' }}>No sales recorded yet.</p>
+        ) : (
+          <div style={styles.tableWrapper}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Receipt</th>
+                  <th style={styles.th}>Date</th>
+                  <th style={styles.th}>Items</th>
+                  <th style={styles.th}>Payment</th>
+                  <th style={styles.th}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sales.map((sale) => (
+                  <tr key={sale.id} style={styles.tableRow}>
+                    <td style={styles.td}>
+                      <span style={styles.receiptId}>#HAMS-{sale.id}</span>
+                    </td>
+                    <td style={{ ...styles.td, color: '#6a6a7e', fontSize: '0.82rem' }}>...</td>
+                    <td style={styles.td}>
+                      <span style={{ fontSize: '0.85rem', color: '#b0b0c0' }}>
+                        {sale.items_list || <span style={{ color: '#5a5a6e' }}>General Sale</span>}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{
+                        ...styles.paymentBadge,
+                        backgroundColor: sale.payment_method === 'M-Pesa' ? 'rgba(79,195,247,0.12)' :
+                                         sale.payment_method === 'Card' ? 'rgba(179,157,219,0.12)' :
+                                         'rgba(111,207,151,0.12)',
+                        color: sale.payment_method === 'M-Pesa' ? '#4fc3f7' :
+                               sale.payment_method === 'Card' ? '#b39ddb' :
+                               '#6fcf97',
+                        borderColor: sale.payment_method === 'M-Pesa' ? 'rgba(79,195,247,0.3)' :
+                                     sale.payment_method === 'Card' ? 'rgba(179,157,219,0.3)' :
+                                     'rgba(111,207,151,0.3)',
+                      }}>
+                        {sale.payment_method}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{ color: '#c9a94e', fontWeight: '700' }}>KSh {Number(sale.total_amount).toLocaleString()}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 const styles = {
-  container: { padding: '20px', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' },
-  refreshBtn: { padding: '8px 15px', backgroundColor: '#34495e', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' },
-  errorAlert: { backgroundColor: '#f8d7da', color: '#721c24', padding: '12px', borderRadius: '4px', marginBottom: '15px' },
-  cardRow: { display: 'flex', gap: '15px', flexWrap: 'wrap', marginTop: '20px' },
-  card: { flex: 1, minWidth: '200px', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
-  cardLabel: { fontSize: '0.85rem', color: '#7f8c8d', fontWeight: 'bold', textTransform: 'uppercase' },
-  cardValue: { margin: '5px 0 0 0', fontSize: '1.6rem', color: '#27ae60' },
-  table: { width: '100%', borderCollapse: 'collapse', marginTop: '15px', textAlign: 'left' },
-  th: { padding: '12px', borderBottom: '2px solid #ddd' },
-  td: { padding: '12px', borderBottom: '1px solid #ddd' }
+  container: {
+    backgroundColor: 'rgba(20, 20, 35, 0.6)',
+    backdropFilter: 'blur(10px)',
+    padding: '28px',
+    borderRadius: '14px',
+    border: '1px solid rgba(255,255,255,0.06)',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    paddingBottom: '14px',
+    borderBottom: '1px solid rgba(201,169,78,0.15)',
+  },
+  headerTitle: {
+    color: '#e0e0f0',
+    fontSize: '1.2rem',
+    fontWeight: '700',
+    margin: 0,
+    fontFamily: "'Playfair Display', serif",
+  },
+  refreshBtn: {
+    padding: '8px 18px',
+    background: 'rgba(201,169,78,0.12)',
+    color: '#c9a94e',
+    border: '1px solid rgba(201,169,78,0.3)',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '0.82rem',
+    fontFamily: "'Inter', sans-serif",
+  },
+  errorAlert: {
+    backgroundColor: 'rgba(231,76,60,0.12)',
+    color: '#ff6b6b',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    marginBottom: '18px',
+    border: '1px solid rgba(231,76,60,0.25)',
+    fontSize: '0.85rem',
+  },
+  cardRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '14px',
+    marginBottom: '28px',
+  },
+  card: {
+    padding: '20px',
+    borderRadius: '12px',
+    border: '1px solid',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  cardLabel: {
+    fontSize: '0.78rem',
+    color: '#7a7a8e',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.8px',
+  },
+  cardValue: {
+    margin: '6px 0 0 0',
+    fontSize: '1.5rem',
+    fontWeight: '700',
+  },
+  cardAccent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '3px',
+    opacity: 0.6,
+  },
+  tableSection: {
+    marginTop: '4px',
+  },
+  tableSectionTitle: {
+    color: '#b0b0c0',
+    fontSize: '0.95rem',
+    fontWeight: '600',
+    marginBottom: '16px',
+  },
+  tableWrapper: {
+    overflowX: 'auto',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'separate',
+    borderSpacing: '0 4px',
+    textAlign: 'left',
+  },
+  th: {
+    padding: '12px 14px',
+    color: '#6a6a7e',
+    fontSize: '0.75rem',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.8px',
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
+  },
+  tableRow: {
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    transition: 'background-color 0.2s',
+  },
+  td: {
+    padding: '12px 14px',
+    borderBottom: '1px solid rgba(255,255,255,0.04)',
+    fontSize: '0.88rem',
+    color: '#9a9ab0',
+  },
+  receiptId: {
+    color: '#d0d0e0',
+    fontWeight: '600',
+    fontSize: '0.85rem',
+  },
+  paymentBadge: {
+    padding: '4px 10px',
+    borderRadius: '6px',
+    fontSize: '0.75rem',
+    fontWeight: '600',
+    border: '1px solid',
+    letterSpacing: '0.3px',
+  },
 };
 
 export default SalesHistory;
