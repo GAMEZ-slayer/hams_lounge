@@ -8,7 +8,7 @@ const pool = require('./config/db');
 const authRoutes = require('./Routes/authRoutes');
 const productRoutes = require('./Routes/productRoutes');
 const salesRoutes = require('./Routes/salesRoutes');
-const mpesaRoutes = require('./routes/mpesaRoutes');
+const mpesaRoutes = require('./Routes/mpesaRoutes');
 
 const app = express();
 
