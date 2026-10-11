@@ -16,7 +16,7 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
   // STK Push states
   const [showSTKModal, setShowSTKModal] = useState(false);
   const [stkStatus, setSTKStatus] = useState(''); // 'initiating', 'waiting', 'success', 'failed'
-  const [checkoutRequestId, setCheckoutRequestId] = useState('');
+ // const [checkoutRequestId, setCheckoutRequestId] = useState('');
   const [statusCheckInterval, setStatusCheckInterval] = useState(null);
   const [shouldAutoPrint, setShouldAutoPrint] = useState(false);
 
@@ -108,7 +108,7 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
       });
 
       if (response.data.success) {
-        setCheckoutRequestId(response.data.data.CheckoutRequestID);
+        //setCheckoutRequestId(response.data.data.CheckoutRequestID);
         setSTKStatus('waiting');
 
         // Start polling for payment status
