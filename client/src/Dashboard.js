@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import api from './api';
 
@@ -16,7 +17,7 @@ function Dashboard({ user, onLogout, onSaleComplete }) {
   // STK Push states
   const [showSTKModal, setShowSTKModal] = useState(false);
   const [stkStatus, setSTKStatus] = useState(''); // 'initiating', 'waiting', 'success', 'failed'
- const [checkoutRequestId, setCheckoutRequestId] = useState('');
+  const [checkoutRequestId, setCheckoutRequestId] = useState('');
   const [statusCheckInterval, setStatusCheckInterval] = useState(null);
   const [shouldAutoPrint, setShouldAutoPrint] = useState(false);
 
